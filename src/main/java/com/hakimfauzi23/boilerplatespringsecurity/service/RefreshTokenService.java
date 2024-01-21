@@ -1,7 +1,8 @@
 package com.hakimfauzi23.boilerplatespringsecurity.service;
 
 import com.hakimfauzi23.boilerplatespringsecurity.data.RefreshToken;
-import com.hakimfauzi23.boilerplatespringsecurity.jwt.exception.TokenRefreshException;
+import com.hakimfauzi23.boilerplatespringsecurity.exception.exception.SignInException;
+import com.hakimfauzi23.boilerplatespringsecurity.exception.exception.TokenRefreshException;
 import com.hakimfauzi23.boilerplatespringsecurity.repository.RefreshTokenRepository;
 import com.hakimfauzi23.boilerplatespringsecurity.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +31,10 @@ public class RefreshTokenService {
     }
 
     public RefreshToken createRefreshToken(Long userId) {
-        RefreshToken refreshToken = new RefreshToken();
+        Optional<RefreshToken> isAlreadyExist = refreshTokenRepository.findByUserId(userId);
 
+        isAlreadyExist.ifPresent(refreshToken -> refreshTokenRepository.delete(refreshToken));
+        RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUser(userRepository.findById(userId).get());
         refreshToken.setExpirationDate(Instant.now().plusMillis(refreshTokenDurationMs));
         refreshToken.setToken(UUID.randomUUID().toString());

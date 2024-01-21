@@ -10,8 +10,9 @@ import com.hakimfauzi23.boilerplatespringsecurity.data.payload.request.TokenRefr
 import com.hakimfauzi23.boilerplatespringsecurity.data.payload.response.JwtResponse;
 import com.hakimfauzi23.boilerplatespringsecurity.data.payload.response.MessageResponse;
 import com.hakimfauzi23.boilerplatespringsecurity.data.payload.response.TokenRefreshResponse;
+import com.hakimfauzi23.boilerplatespringsecurity.exception.exception.SignInException;
 import com.hakimfauzi23.boilerplatespringsecurity.jwt.JwtUtils;
-import com.hakimfauzi23.boilerplatespringsecurity.jwt.exception.TokenRefreshException;
+import com.hakimfauzi23.boilerplatespringsecurity.exception.exception.TokenRefreshException;
 import com.hakimfauzi23.boilerplatespringsecurity.repository.RoleRepository;
 import com.hakimfauzi23.boilerplatespringsecurity.repository.UserRepository;
 import com.hakimfauzi23.boilerplatespringsecurity.service.RefreshTokenService;
@@ -22,11 +23,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -100,26 +104,32 @@ public class AuthController {
     @PostMapping("/signin")
     public ResponseEntity<?> authenticateUser(@Valid @RequestBody LoginRequest loginRequest) {
 
-        Authentication authentication = authenticationManager
-                .authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
+        try {
 
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        String jwt = jwtUtils.generateJwtToken(authentication);
+            Authentication authentication = authenticationManager
+                    .authenticate(new UsernamePasswordAuthenticationToken(loginRequest.getUsername(), loginRequest.getPassword()));
 
-        UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
-        List<String> roles = userDetails.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList());
+            SecurityContextHolder.getContext().setAuthentication(authentication);
+            String jwt = jwtUtils.generateJwtToken(authentication);
 
-        RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
+            UserDetailsImpl userDetails = (UserDetailsImpl) authentication.getPrincipal();
+            List<String> roles = userDetails.getAuthorities().stream()
+                    .map(GrantedAuthority::getAuthority)
+                    .collect(Collectors.toList());
 
-        return ResponseEntity.ok(new JwtResponse(
-                jwt,
-                refreshToken.getToken(),
-                userDetails.getId(),
-                userDetails.getUsername(),
-                userDetails.getEmail(),
-                roles));
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails.getId());
+
+            return ResponseEntity.ok(new JwtResponse(
+                    jwt,
+                    refreshToken.getToken(),
+                    userDetails.getId(),
+                    userDetails.getUsername(),
+                    userDetails.getEmail(),
+                    roles));
+        } catch (AuthenticationException exception) {
+            throw new SignInException(exception.getMessage());
+        }
+
     }
 
     @PostMapping("/refresh-token")

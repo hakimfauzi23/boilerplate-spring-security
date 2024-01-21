@@ -1,4 +1,4 @@
-package com.hakimfauzi23.boilerplatespringsecurity.jwt.exception;
+package com.hakimfauzi23.boilerplatespringsecurity.exception.exception;
 
 import java.util.Date;
 
